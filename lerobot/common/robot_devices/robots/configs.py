@@ -611,3 +611,73 @@ class LeKiwiRobotConfig(RobotConfig):
     )
 
     mock: bool = False
+
+@RobotConfig.register_subclass("cuarm")
+@dataclass
+class CuArmRobotConfig(ManipulatorRobotConfig):
+    calibration_dir: str = ".cache/calibration/cuarm"
+    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
+    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
+    # the number of motors in your follower arms.
+    max_relative_target: int | None = None
+
+    leader_arms: dict[str, MotorsBusConfig] = field(
+        default_factory=lambda: {
+            "main": DynamixelMotorsBusConfig(
+                port="/dev/tty.usbmodem585A0085511",
+                motors={
+                    # name: (index, model)
+                    "base_rotate": [1, "xl330-m077"],
+                    "shoulder_pan": [2, "xl330-m077"],
+                    "shoulder_lift": [3, "xl330-m077"],
+                    "elbow_flex": [4, "xl330-m077"],
+                    "forearm_roll": [5, "xl330-m288"],
+                    "wrist_flex": [6, "xl330-m077"],
+                    "wrist_roll": [7, "xl330-m077"],
+                    "gripper": [8, "xl330-m077"],
+                },
+            ),
+        }
+    )
+
+    follower_arms: dict[str, MotorsBusConfig] = field(
+        default_factory=lambda: {
+            "main": DynamixelMotorsBusConfig(
+                port="/dev/tty.usbmodem585A0076891",
+                motors={
+                    # name: (index, model)
+                    "base_rotate": [1, "xl330-m077"],
+                    "shoulder_pan": [2, "xl330-m077"],
+                    "shoulder_lift": [3, "xl330-m077"],
+                    "elbow_flex": [4, "xl330-m077"],
+                    "forearm_roll": [5, "xl330-m288"],
+                    "wrist_flex": [6, "xl330-m077"],
+                    "wrist_roll": [7, "xl330-m077"],
+                    "gripper": [8, "xl330-m077"],
+                },
+            ),
+        }
+    )
+
+    cameras: dict[str, CameraConfig] = field(
+        default_factory=lambda: {
+            "kinect": OpenCVCameraConfig(
+                camera_index=0,
+                fps=30,
+                width=640,
+                height=480,
+            ),
+            "webcam": OpenCVCameraConfig(
+                camera_index=1,
+                fps=30,
+                width=640,
+                height=480,
+            ),
+        }
+    )
+
+    # ~ CuArm specific settings ~
+    # Sets the leader arm in torque mode with the gripper motor set to this angle. This makes it possible
+    # to squeeze the gripper and have it spring back to an open position on its own.
+
+    mock: bool = False
