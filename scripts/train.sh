@@ -2,6 +2,7 @@ CUDA_VISIBLE_DEVICES=4 python lerobot/scripts/train.py \
   --dataset.repo_id=lerobot/cuarm \
   --dataset.root=/home/smartgrasping/rcao/lerobot/data/cuarm \
   --policy.type=act \
+  --env.type=aloha \
   --output_dir=outputs/train/cuarm \
   --job_name=cuarm \
   --policy.device=cuda \
