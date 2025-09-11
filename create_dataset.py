@@ -9,15 +9,17 @@ from lerobot.common.robot_devices.robots.utils import Robot, make_robot_from_con
 from lerobot.common.robot_devices.robots.configs import RobotConfig, StretchRobotConfig
 
 import shutil
-dataset_root = '/home/smartgrasping/rcao/lerobot/data/cuarm'
+dataset_root = 'data/cuarm_small_9_12'
 single_task = "Pick the cup and drop it in the table."
 # os.removedirs(dataset_root)
 shutil.rmtree(dataset_root, ignore_errors=True)
 
-episode_num = 1
+# episode_num = 1
 # fps = 100.0
 raw_fps = 100.0
 data_fps = 20
+# crop_paras = 240, 700, 420, 1260
+crop_paras = None
 # 25
 
 def downsample_data(joint_data, raw_fps=100.0, data_fps=30.0):
@@ -71,12 +73,12 @@ def get_frames_by_indices(video_path, indices):
 
 
 cfg = RecordControlConfig(
-    repo_id="cao63445538/cuarm",
+    repo_id="cao63445538/cuarm_s",
     single_task=single_task,
     root=dataset_root,
     policy=None,
-    fps=30,
-    warmup_time_s=10,
+    fps=data_fps,
+    warmup_time_s=0.1,
     episode_time_s=60,
     reset_time_s=60,
     num_episodes=50,
@@ -85,7 +87,7 @@ cfg = RecordControlConfig(
     private=False,
 )
 
-robot = make_robot('cuarm')
+robot = make_robot('cuarm_s')
 
 dataset = LeRobotDataset.create(
     cfg.repo_id,
@@ -97,42 +99,71 @@ dataset = LeRobotDataset.create(
     image_writer_threads=cfg.num_image_writer_threads_per_camera,
 )
 
-raw_data_root = '/home/smartgrasping/rcao/lerobot/data/imitation_data'
+raw_data_root = 'data/small_9_12'
 
-for episode_num in range(1, 6):
-    # joint_data_path = os.path.join(raw_data_root, 'data{}'.format(episode_num), 'data.txt')
-    # main_video_data_path = os.path.join(raw_data_root, 'data{}'.format(episode_num), 'Kinect.avi')
+for episode_num in range(0, 3):
 
     joint_data_path = os.path.join(raw_data_root, '{}'.format(episode_num), 'data.txt')
     main_video_data_path = os.path.join(raw_data_root, '{}'.format(episode_num), 'Kinect.avi')
     hand_video_data_path = os.path.join(raw_data_root, '{}'.format(episode_num), 'UsbCam.avi')
     
+    if not os.path.exists(joint_data_path):
+        print(f"Data files for episode {episode_num} are missing. Skipping this episode.")
+        continue
+    
+    if not os.path.exists(main_video_data_path):
+        single_arm = True
+    else:
+        single_arm = False
+        
     joint_data = np.loadtxt(joint_data_path)
     vaild_data_mask = joint_data[:, -4] >= 0
     joint_data = joint_data[vaild_data_mask]
 
     sampled_joint_data = downsample_data(joint_data, raw_fps, data_fps)
-    sampled_main_frames = get_frames_by_indices(main_video_data_path, sampled_joint_data[:, -4].astype(int))
-    sampled_hand_frames = get_frames_by_indices(hand_video_data_path, sampled_joint_data[:, -3].astype(int))
+
+    # TODO: modify the index position
+    sampled_hand_frames = get_frames_by_indices(hand_video_data_path, sampled_joint_data[:, -4].astype(int))
+    if not single_arm:
+        sampled_main_frames = get_frames_by_indices(main_video_data_path, sampled_joint_data[:, -4].astype(int))
     
-    for data_sample, main_frame, hand_frame in zip(sampled_joint_data, sampled_main_frames, sampled_hand_frames):
-        
-        joint_state = np.append(data_sample[7:14], data_sample[-2:-1])
-        observation, action = {}, {}
-        observation["observation.state"] = torch.from_numpy(joint_state).float()
-        action["action"] = torch.from_numpy(joint_state).float()
+    if not single_arm:
+        for data_sample, main_frame, hand_frame in zip(sampled_joint_data, sampled_main_frames, sampled_hand_frames):
 
-        resize_main_frame = cv2.resize(main_frame, (640, 480))
-        resize_main_frame = cv2.cvtColor(resize_main_frame, cv2.COLOR_BGR2RGB) / 255.0
-        observation[f"observation.images.kinect"] = torch.from_numpy(resize_main_frame).float()
+            joint_state = np.append(data_sample[7:14], data_sample[-1:])
+            observation, action = {}, {}
+            observation["observation.state"] = torch.from_numpy(joint_state).float()
+            action["action"] = torch.from_numpy(joint_state).float()
 
-        hand_frame = cv2.rotate(hand_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        resize_hand_frame = cv2.resize(hand_frame, (640, 480))
-        resize_hand_frame = cv2.cvtColor(resize_hand_frame, cv2.COLOR_BGR2RGB) / 255.0
-        observation[f"observation.images.webcam"] = torch.from_numpy(resize_hand_frame).float()
-        
-        frame = {**observation, **action, "task": single_task}
-        dataset.add_frame(frame)
+            if crop_paras[0] != 0 or crop_paras is not None:
+                main_frame = main_frame[crop_paras[0]:crop_paras[1], crop_paras[2]:crop_paras[3], :]
+            resize_main_frame = cv2.resize(main_frame, (640, 480))
+            resize_main_frame = cv2.cvtColor(resize_main_frame, cv2.COLOR_BGR2RGB) / 255.0
+            observation[f"observation.images.kinect"] = torch.from_numpy(resize_main_frame).float()
 
+            hand_frame = cv2.rotate(hand_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            resize_hand_frame = cv2.resize(hand_frame, (640, 480))
+            resize_hand_frame = cv2.cvtColor(resize_hand_frame, cv2.COLOR_BGR2RGB) / 255.0
+            observation[f"observation.images.webcam"] = torch.from_numpy(resize_hand_frame).float()
+            
+            frame = {**observation, **action, "task": single_task}
+            dataset.add_frame(frame)
+
+    else:
+        for data_sample, hand_frame in zip(sampled_joint_data, sampled_hand_frames):
+
+            joint_state = np.append(data_sample[:6], data_sample[-2:-1])
+            observation, action = {}, {}
+            observation["observation.state"] = torch.from_numpy(joint_state).float()
+            action["action"] = torch.from_numpy(joint_state).float()
+
+            hand_frame = cv2.rotate(hand_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            resize_hand_frame = cv2.resize(hand_frame, (640, 480))
+            resize_hand_frame = cv2.cvtColor(resize_hand_frame, cv2.COLOR_BGR2RGB) / 255.0
+            observation[f"observation.images.webcam"] = torch.from_numpy(resize_hand_frame).float()
+            
+            frame = {**observation, **action, "task": single_task}
+            dataset.add_frame(frame)
+    
     # dataset.clear_episode_buffer()
     dataset.save_episode()

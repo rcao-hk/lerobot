@@ -25,6 +25,7 @@ from lerobot.common.robot_devices.robots.configs import (
     So100RobotConfig,
     StretchRobotConfig,
     CuArmRobotConfig,
+    CuArmSmallRobotConfig,
 )
 
 
@@ -65,6 +66,8 @@ def make_robot_config(robot_type: str, **kwargs) -> RobotConfig:
         return LeKiwiRobotConfig(**kwargs)
     elif robot_type == "cuarm":
         return CuArmRobotConfig(**kwargs)
+    elif robot_type == "cuarm_s":
+        return CuArmSmallRobotConfig(**kwargs)
     else:
         raise ValueError(f"Robot type '{robot_type}' is not available.")
 

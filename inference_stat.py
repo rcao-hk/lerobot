@@ -1,4 +1,4 @@
-# from lerobot.common.policies.act.modeling_act import ACTPolicy
+from lerobot.common.policies.act.modeling_act import ACTPolicy
 from lerobot.common.policies.diffusion.modeling_diffusion import DiffusionPolicy
 from lerobot.common.robot_devices.utils import busy_wait
 import time
@@ -12,10 +12,10 @@ inference_time_s = 60
 fps = 20
 device = "cuda"  # TODO: On Mac, use "mps" or "cpu"
 
-# ckpt_path = "outputs/cuarm/checkpoints/006000/pretrained_model"
-# policy = ACTPolicy.from_pretrained(ckpt_path)
-ckpt_path = "outputs/train/cuarm_8_8_dp/checkpoints/005000/pretrained_model"
-policy = DiffusionPolicy.from_pretrained(ckpt_path)
+ckpt_path = "outputs/train/cuarm_8_8_bs32/checkpoints/002000/pretrained_model"
+policy = ACTPolicy.from_pretrained(ckpt_path)
+# ckpt_path = "outputs/train/cuarm_8_8_dp/checkpoints/005000/pretrained_model"
+# policy = DiffusionPolicy.from_pretrained(ckpt_path)
 policy.to(device)
 
 start = torch.cuda.Event(enable_timing=True)

@@ -51,5 +51,5 @@ def plot_joints_and_states(file_path):
 
 # Example usage:
 # Assuming the file path is 'data.txt', you can call the function as:
-plot_joints_and_states('data/imitation_data/data1/data.txt')
+plot_joints_and_states('data/7_17/1/data.txt')
 

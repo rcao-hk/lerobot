@@ -1,3 +1,4 @@
 python lerobot/scripts/visualize_dataset_html.py \
     --repo-id lerobot/cuarm \
-    --root /home/smartgrasping/rcao/lerobot/data/cuarm
+    --root data/cuarm_small_9_12 \
+    --port 9090
